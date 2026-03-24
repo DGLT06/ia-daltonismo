@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Detector de Color IA</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest"></script>
+
+<style>
+body{
+  font-family: Arial;
+  text-align:center;
+  background: linear-gradient(120deg,#ffd6e0,#d6f0ff,#e6ffd6,#fff0d6);
+}
+
+button, input{
+  padding:10px;
+  margin:5px;
+  border:none;
+  border-radius:10px;
+}
+
+video{
+  margin-top:15px;
+  border-radius:15px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Detector de Color IA</h2>
+
+<input id="url" placeholder="URL modelo (termina en /)" size="45"><br>
+
+<button onclick="iniciar()">Iniciar</button>
+<button onclick="detectar()">Saber color</button>
+
+<p id="estado">Estado: esperando</p>
+<p id="resultado">Color: ---</p>
+
+<video id="video" width="300" autoplay playsinline></video>
+
+<script>
+let activo = false;
+let video = document.getElementById("video");
+let model = null;
+
+async function iniciar(){
+  try{
+    // 🔥 Cámara primero (esto ya funciona)
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    video.srcObject = stream;
+
+    document.getElementById("estado").innerText = "Cámara activada ✔";
+
+    // 🔥 Modelo
+    const base = document.getElementById("url").value.trim();
+
+    if(!base){
+      alert("Pega la URL del modelo");
+      return;
+    }
+
+    const modelURL = base + "model.json";
+    const metaURL = base + "metadata.json";
+
+    document.getElementById("estado").innerText = "Cargando modelo...";
+
+    model = await tmImage.load(modelURL, metaURL);
+
+    document.getElementById("estado").innerText = "Todo listo ✔";
+
+    activo = true;
+
+  }catch(e){
+    console.error(e);
+    document.getElementById("estado").innerText = "Error ❌";
+    alert("Error cargando modelo o cámara");
+  }
+}
+
+async function detectar(){
+  if(!activo){
+    document.getElementById("estado").innerText = "Debes iniciar primero";
+    return;
+  }
+
+  // 🔥 USAR EL VIDEO DIRECTAMENTE (aquí estaba el fallo antes)
+  const pred = await model.predict(video);
+
+  let mejor = pred[0];
+
+  for(let i=1;i<pred.length;i++){
+    if(pred[i].probability > mejor.probability){
+      mejor = pred[i];
+    }
+  }
+
+  document.getElementById("resultado").innerText =
+    "Color: " + mejor.className +
+    " (" + (mejor.probability*100).toFixed(1) + "%)";
+}
+</script>
+
+</body>
+</html>
